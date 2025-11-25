@@ -1,0 +1,57 @@
+x = Xdistance;
+y = Zdistance;
+xRange = [min(Xdistance), max(Xdistance)];
+yRange = [min(Zdistance), max(Zdistance)];
+xPadding = 0.1 * diff(xRange);
+yPadding = 0.1 * diff(yRange);
+
+xEdges = linspace(xRange(1) - xPadding, xRange(2) + xPadding, 150);
+yEdges = linspace(yRange(1) - yPadding, yRange(2) + yPadding, 150);
+N = histcounts2(y(:), x(:), yEdges, xEdges);
+
+% Smoothing
+[xG, yG] = meshgrid(-8:8);
+sigma = 4.0;
+g = exp(-xG.^2./(2.*sigma.^2)-yG.^2./(2.*sigma.^2));
+g = g./sum(g(:));
+smoothedData = conv2(N, g, 'same');
+
+% Interpolate to higher resolution
+[xi, yi] = meshgrid(linspace(xEdges(1), xEdges(end), 400), ...
+                    linspace(yEdges(1), yEdges(end), 400));
+[xOrig, yOrig] = meshgrid(xEdges(1:end-1) + diff(xEdges(1:2))/2, ...
+                          yEdges(1:end-1) + diff(yEdges(1:2))/2);
+smoothedInterp = interp2(xOrig, yOrig, smoothedData, xi, yi, 'cubic');
+
+% Scatter Plot
+subplot(1, 2, 1);
+scatter(Xdistance, Zdistance, 20, 'r', 'filled', 'MarkerFaceAlpha', 0.3);
+axis equal;
+set(gca, 'XLim', xEdges([1 end]), 'YLim', yEdges([1 end]));
+title(sprintf('Scattergram (%d points)', length(Xdistance)));
+xlabel('X Distance');
+ylabel('Z Distance');
+grid on;
+xLimits1 = get(gca, 'XLim');
+yLimits1 = get(gca, 'YLim');
+xTicks = floor(xLimits1(1)/5)*5 : 5 : ceil(xLimits1(2)/5)*5;
+yTicks = floor(yLimits1(1)/5)*5 : 5 : ceil(yLimits1(2)/5)*5;
+set(gca, 'XTick', xTicks, 'YTick', yTicks);
+
+% Plot smooth heatmap:
+subplot(1, 2, 2);
+imagesc(xi(1,:), yi(:,1), smoothedInterp);
+axis equal tight;
+set(gca, 'YDir', 'normal');
+colormap(gca, turbo);
+colorbar;
+title('Positional Data');
+xlabel('X Distance');
+ylabel('Z Distance');
+xLimits2 = get(gca, 'XLim');
+yLimits2 = get(gca, 'YLim');
+xTicks = floor(xLimits2(1)/5)*5 : 5 : ceil(xLimits2(2)/5)*5;
+yTicks = floor(yLimits2(1)/5)*5 : 5 : ceil(yLimits2(2)/5)*5;
+set(gca, 'XTick', xTicks, 'YTick', yTicks);
+text(0.02, 0.98, '1 unit \approx 2.6 ft', 'Units', 'normalized', ...
+'VerticalAlignment', 'top', 'Color', 'white', 'FontSize', 10);
